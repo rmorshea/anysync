@@ -15,7 +15,7 @@ async def test_await_wrapped_function():
 
 
 async def test_await_wrapped_coroutine():
-    assert await AnySync(wrapped()) == "value"
+    assert await AnySync(unwrapped()) == "value"
 
 
 def test_sync_wrapped_function():
@@ -23,7 +23,7 @@ def test_sync_wrapped_function():
 
 
 def test_sync_wrapped_coroutine():
-    assert AnySync(wrapped()).run() == "value"
+    assert AnySync(unwrapped()).run() == "value"
 
 
 async def test_sync_wrapped_function_in_async_context():
@@ -31,4 +31,4 @@ async def test_sync_wrapped_function_in_async_context():
 
 
 async def test_sync_wrapped_coroutine_in_async_context():
-    assert AnySync(wrapped()).run() == "value"
+    assert AnySync(unwrapped()).run() == "value"

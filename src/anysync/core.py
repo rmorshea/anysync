@@ -42,4 +42,7 @@ class AnySync(Awaitable[R]):
             return _POOL.submit(anyio.run, lambda: self._coro, backend=backend).result()
 
 
-_POOL = ThreadPoolExecutor(max_workers=os.getenv("ANYIO_MAX_CONCURRENCY"), thread_name_prefix="anysync")
+_POOL = ThreadPoolExecutor(
+    max_workers=int(c) if (c := os.getenv("ANYIO_MAX_CONCURRENCY")) else None,
+    thread_name_prefix="anysync",
+)
