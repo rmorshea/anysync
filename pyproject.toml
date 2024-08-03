@@ -1,0 +1,154 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "anysync"
+dynamic = ["version"]
+description = 'A lightweight library for allowing async functions to be called in a synchronous manner.'
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+keywords = []
+authors = [{ name = "Ryan Morshead", email = "ryan.morshead@gmail.com" }]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = ["anyio>=4,<5"]
+
+[project.urls]
+Documentation = "https://github.com/rmorshea/anysync#readme"
+Issues = "https://github.com/rmorshea/anysync/issues"
+Source = "https://github.com/rmorshea/anysync"
+
+[tool.hatch.version]
+path = "src/anysync/__init__.py"
+
+[tool.hatch.envs.default]
+dependencies = [
+  "coverage[toml]>=6.5",
+  "pytest>=8.2.2,<9",
+  "pytest-asyncio>=0.23.7,<1",
+]
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:tests}"
+test-cov = "coverage run -m pytest {args:tests}"
+cov-report = ["- coverage combine", "coverage report"]
+cov = ["test-cov", "cov-report"]
+
+[tool.hatch.envs.lint]
+extra-dependencies = [
+  "black>=23.1.0,<24",
+  "pyright>=1.1.367,<2",
+  "ruff>=0.4.8,<1",
+]
+[tool.hatch.envs.lint.scripts]
+typing = "pyright {args:src/anysync tests}"
+style = ["ruff check {args:.}", "black --check --diff {args:.}"]
+fmt = ["black {args:.}", "ruff check --fix {args:.}", "style"]
+all = ["style", "typing"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.black]
+preview = true
+target-version = ["py39"]
+line-length = 120
+skip-string-normalization = true
+
+[tool.ruff]
+target-version = "py39"
+line-length = 120
+
+[tool.ruff.format]
+docstring-code-format = true
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.lint]
+select = [
+  "A",
+  "ARG",
+  "B",
+  "C",
+  "DTZ",
+  "E",
+  "EM",
+  "F",
+  "FBT",
+  "I",
+  "ICN",
+  "ISC",
+  "N",
+  "PLC",
+  "PLE",
+  "PLR",
+  "PLW",
+  "Q",
+  "RUF",
+  "S",
+  "T",
+  "TID",
+  "UP",
+  "W",
+  "YTT",
+]
+ignore = [
+  # Allow non-abstract empty methods in abstract base classes
+  "B027",
+  # Allow boolean positional values in function calls, like `dict.get(... True)`
+  "FBT003",
+  # Ignore checks for possible passwords
+  "S105",
+  "S106",
+  "S107",
+  # Ignore complexity
+  "C901",
+  "PLR0911",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+]
+unfixable = [
+  # Don't touch unused imports
+  "F401",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["anysync"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use magic values, assertions, and relative imports
+"tests/**/*" = ["PLC2701", "S101", "TID252", "RUF029", "PLC2801"]
+
+[tool.coverage.run]
+source_pkgs = ["anysync", "tests"]
+branch = true
+parallel = true
+omit = []
+
+[tool.coverage.paths]
+anysync = ["src/anysync"]
+tests = ["tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no ?cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+  '\.\.\.',
+]
+fail_under = 100
+show_missing = true
+skip_covered = true
+sort = "Name"
