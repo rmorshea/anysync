@@ -90,7 +90,7 @@ synchronously when needed. The main differences are that `anysync` works with ty
 checkers, is lighter weight, and works with other async libraries like `trio` and
 `curio` via `anyio`.
 
-# Comparison with automatic detection
+## Comparison with automatic detection
 
 The other approach to dealing with the challenges of mixing synchronous and asynchronous
 code is to automatically infer whether a function should be run synchronously based on
