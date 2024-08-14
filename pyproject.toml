@@ -43,15 +43,11 @@ cov-report = ["- coverage combine", "coverage report"]
 cov = ["test-cov", "cov-report"]
 
 [tool.hatch.envs.lint]
-extra-dependencies = [
-  "black>=23.1.0,<24",
-  "pyright>=1.1.367,<2",
-  "ruff>=0.4.8,<1",
-]
+extra-dependencies = ["black==24.8.0", "pyright==1.1.375", "ruff==0.5.7"]
 [tool.hatch.envs.lint.scripts]
 typing = "pyright {args:src/anysync tests}"
 style = ["ruff check {args:.}", "black --check --diff {args:.}"]
-fmt = ["black {args:.}", "ruff check --fix {args:.}", "style"]
+fix = ["black {args:.}", "ruff check --fix {args:.}", "style"]
 all = ["style", "typing"]
 
 [tool.pytest.ini_options]
@@ -73,6 +69,7 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.ruff.lint]
+preview = true
 select = [
   "A",
   "ARG",
@@ -117,8 +114,8 @@ ignore = [
   "PLR0915",
 ]
 unfixable = [
-  # Don't touch unused imports
-  "F401",
+  # Don't touch unused variables
+  "F841",
 ]
 
 [tool.ruff.lint.isort]

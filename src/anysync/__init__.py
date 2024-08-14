@@ -1,4 +1,4 @@
-from anysync.core import AnySync, anysync
+from anysync.core import AnySync, anysync, anysynccontextmanager
 
-__version__ = "0.1.0"
-__all__ = ["anysync", "AnySync"]
+__version__ = "0.2.0"
+__all__ = ["AnySync", "anysync", "anysynccontextmanager"]
