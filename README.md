@@ -234,7 +234,7 @@ AnySync wrapped coroutines or context managers will not propagate changes to
 [`contextvars`](https://docs.python.org/3/library/contextvars.html) from async to
 synchronous contexts. This is because `contextvars` are not shared between threads or
 event loops and AnySync must create these in order to run coroutines synchronously.
-Given this, the following is not supported:
+Given this, the following is **not** supported:
 
 ```python
 from contextvars import ContextVar
