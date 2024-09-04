@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Awaitable, Coroutine, Generator
+from collections.abc import AsyncIterator, Awaitable, Coroutine, Generator
 from contextlib import AbstractAsyncContextManager, AbstractContextManager, asynccontextmanager
 from functools import wraps
 from types import TracebackType
@@ -24,7 +24,7 @@ def anysync(func: Callable[P, Coroutine[Any, Any, R]]) -> Callable[P, AnySync[R]
     return wrapper
 
 
-def anysynccontextmanager(func: Callable[P, AbstractAsyncContextManager[R]]) -> Callable[P, AnySyncContextManager[R]]:
+def anysynccontextmanager(func: Callable[P, AsyncIterator[R]]) -> Callable[P, AnySyncContextManager[R]]:
     """Allow an async context manager to optionally run synchronously."""
 
     ctx = asynccontextmanager(func)
