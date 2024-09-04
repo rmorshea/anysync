@@ -2,15 +2,13 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Coroutine, Generator
 from contextlib import AbstractAsyncContextManager, AbstractContextManager, asynccontextmanager
-from contextvars import copy_context
 from functools import wraps
 from types import TracebackType
 from typing import Any, Callable, ParamSpec, TypeVar
 
 import anyio
+from anyio.from_thread import start_blocking_portal
 from sniffio import AsyncLibraryNotFoundError, current_async_library
-
-from anysync import _private
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -49,13 +47,13 @@ class AnySync(Awaitable[R]):
 
     def run(self) -> R:
         """Run the coroutine synchronously."""
-        ctx = copy_context()
         try:
             backend = current_async_library()
         except AsyncLibraryNotFoundError:
-            return anyio.run(ctx.run, lambda: self._coro)
+            return anyio.run(lambda: self._coro)
         else:
-            return _private.get_pool().submit(ctx.run, anyio.run, lambda: self._coro, backend=backend).result()
+            with start_blocking_portal(backend=backend) as portal:
+                return portal.call(lambda: self._coro)
 
 
 class AnySyncContextManager(AbstractContextManager[R], AbstractAsyncContextManager[R]):
