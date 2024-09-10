@@ -43,7 +43,7 @@ cov-report = ["- coverage combine", "coverage report"]
 cov = ["test-cov", "cov-report"]
 
 [tool.hatch.envs.lint]
-extra-dependencies = ["black==24.8.0", "pyright==1.1.375", "ruff==0.5.7"]
+extra-dependencies = ["black==24.8.0", "pyright==1.1.379", "ruff==0.5.7"]
 [tool.hatch.envs.lint.scripts]
 typing = "pyright {args:src/anysync tests}"
 style = ["ruff check {args:.}", "black --check --diff {args:.}"]
@@ -112,6 +112,7 @@ ignore = [
   "PLR0912",
   "PLR0913",
   "PLR0915",
+  "PLC2801",
 ]
 unfixable = [
   # Don't touch unused variables
