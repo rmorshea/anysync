@@ -70,7 +70,6 @@ detect how it's being used and run the coroutine accordingly.
 You can even use AnySync on your async context managers.
 
 ```python
-import asyncio
 import anysync
 
 
@@ -79,18 +78,8 @@ async def cm():
     yield 42
 
 
-def test_sync():
-    with cm() as x:
-        assert x == 42
-
-
-async def test_async():
-    async with cm() as x:
-        assert x == 42
-
-
-test_sync()
-asyncio.run(test_async())
+with cm() as x:
+    assert x == 42
 ```
 
 You can alternatively subclass the `AnySyncContextManager` class:
@@ -107,18 +96,8 @@ class CM(AnySyncContextManager):
         pass
 
 
-def test_sync():
-    with CM() as x:
-        assert x == 42
-
-
-async def test_async():
-    async with CM() as x:
-        assert x == 42
-
-
-test_sync()
-asyncio.run(test_async())
+with CM() as x:
+    assert x == 42
 ```
 
 # Comparisons
