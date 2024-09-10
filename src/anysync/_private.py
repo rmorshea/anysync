@@ -60,7 +60,6 @@ def _temporary_portal() -> Iterator[BlockingPortal]:
         cancel_remaining_tasks = True
         raise
     finally:
-        _WORKER_THREADS.remove(thread)
         try:
             portal.call(portal.stop, cancel_remaining_tasks)
         except RuntimeError:  # nocov
