@@ -1,4 +1,4 @@
-name: Python package
+name: Python
 
 on:
     push:
@@ -7,7 +7,8 @@ on:
         branches: ["main"]
 
 jobs:
-    build:
+    check:
+        name: Checks
         runs-on: ubuntu-latest
         strategy:
             matrix:
