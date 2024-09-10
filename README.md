@@ -3,6 +3,7 @@
 A lightweight library for allowing async functions to be called in a synchronous manner.
 
 ```python
+import asyncio
 from anysync import anysync
 
 
@@ -12,53 +13,57 @@ async def f():
 
 
 assert f().run() == 42
+
+
+async def main():
+    assert await f() == 42
+
+
+asyncio.run(main())
 ```
+
+Just `pip install anysync` and you're good to go!
 
 # Usage
 
 ## Coroutines
 
 The primary use case for `anysync` is to allow async functions to be called in a
-synchronous manner. All you need to do is add the `anysync` decorator to your async
-function:
+synchronous manner. All you need to do is add the `anysync.coroutine` decorator to your
+async function:
 
 ```python
 import asyncio
-from anysync import anysync
+import anysync
 
 
-@anysync
+@anysync.coroutine
 async def f():
     return 42
 
 
-def test_sync():
-    assert f().run() == 42
-
-
-async def test_async():
-    assert await f() == 42
-
-
-test_sync()
-asyncio.run(test_async())
+assert f().run() == 42
 ```
 
-`anysync` works by wrapping coroutines returned by async functions in an `AnySync`
-object that can both be awaited and executed synchronously when calling its `run()`
-method.
+## Generators
+
+You can also use `anysync` with async generators:
 
 ```python
-from anysync import AnySync
+import asyncio
+import anysync
 
 
-async def f():
-    return 42
+@anysync.generator
+async def gen():
+    yield 42
 
 
-coro = f()
-assert AnySync(coro).run() == 42
+assert list(gen()) == [42]
 ```
+
+Note that in this case you don't need to call `run()`. The generator will automatically
+detect how it's being used and run the coroutine accordingly.
 
 ## Context Managers
 
@@ -66,10 +71,10 @@ You can even use AnySync on your async context managers.
 
 ```python
 import asyncio
-from anysync import anysynccontextmanager
+import anysync
 
 
-@anysynccontextmanager
+@@anysync.contextmanager
 async def cm():
     yield 42
 
@@ -163,8 +168,9 @@ asyncio.run(test_async())
 
 AnySync is similar to [`unsync`](https://pypi.org/project/unsync/) in that it allows
 async functions to be called synchronously when needed. The main differences are that
-AnySync works with type checkers, is lighter weight, and works with other async
-libraries like `trio` and `curio` via `anyio`.
+AnySync works with type checkers, is lighter weight, works with other async libraries
+like `trio` via `anyio`, in addition to supporting async generators and context
+managers.
 
 ## Automatic Detection
 
@@ -222,11 +228,77 @@ returns a coroutine object which causes `work()` to fail.
 ## How it Works
 
 AnySync works by detecting the presence of a running event loop. If one already exists,
-then AnySync spawns a thread and corresponding event loop to run the coroutine.
-Specifically, it has an underlying
-[`ThreadPoolExecutor`](https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor)
-whose `max_workers` can be configured by setting a `ANYSYNC_THREAD_COUNT_MAX`
-environment variable.
+then AnySync uses a separate thread to run the coroutine. Where possible AnySync tries
+to reuse a single global background thread that's created only when it's needed.
+However, in the case that a program repeatedly trys to synchronously run a coroutine
+while in an async context, AnySync will create a new thread each time.
+
+For example, you can count the number of threads that are used in two different
+scenarios. The first reuses the same global thread over and over again.
+
+```python
+from threading import current_thread
+
+import anysync
+
+threads = set()
+
+
+@anysync.coroutine
+async def f():
+    threads.add(current_thread())  # runs in the main thread
+    return g().run()
+
+
+@anysync.coroutine
+async def g():
+    threads.add(current_thread())  # runs in anysync's global background thread
+    return 42
+
+
+f().run()
+f().run()
+
+main_thread = current_thread()
+assert len(threads - {main_thread}) == 1
+```
+
+In the second scenario, ends up creating two threads in addition to AnySync's global
+background thread because `g()` runs in the global background thread and `h()` runs in a
+new thread each time.
+
+```python
+from threading import current_thread
+
+import anysync
+
+threads = set()
+
+
+@anysync.coroutine
+async def f():
+    threads.add(current_thread())  # runs in the main thread
+    return g().run()
+
+
+@anysync.coroutine
+async def g():
+    threads.add(current_thread())  # runs in anysync's global background thread
+    return h().run()
+
+
+@anysync.coroutine
+async def h():
+    threads.add(current_thread())  # runs in a new thread each time
+    return 42
+
+
+f().run()
+f().run()
+
+main_thread = current_thread()
+assert len(threads - {main_thread}) == 3
+```
 
 ## Interacting with `contextvars`
 

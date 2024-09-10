@@ -6,3 +6,4 @@ dist/
 wheels/
 *.egg-info
 .coverage
+.coverage.*
