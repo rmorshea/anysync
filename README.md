@@ -70,27 +70,16 @@ detect how it's being used and run the coroutine accordingly.
 You can even use AnySync on your async context managers.
 
 ```python
-import asyncio
 import anysync
 
 
-@@anysync.contextmanager
+@anysync.contextmanager
 async def cm():
     yield 42
 
 
-def test_sync():
-    with cm() as x:
-        assert x == 42
-
-
-async def test_async():
-    async with cm() as x:
-        assert x == 42
-
-
-test_sync()
-asyncio.run(test_async())
+with cm() as x:
+    assert x == 42
 ```
 
 You can alternatively subclass the `AnySyncContextManager` class:
@@ -107,18 +96,8 @@ class CM(AnySyncContextManager):
         pass
 
 
-def test_sync():
-    with CM() as x:
-        assert x == 42
-
-
-async def test_async():
-    async with CM() as x:
-        assert x == 42
-
-
-test_sync()
-asyncio.run(test_async())
+with CM() as x:
+    assert x == 42
 ```
 
 # Comparisons
@@ -182,7 +161,8 @@ Prefect's
 decorator. The main downside is that the behavior of the function changes dynamically
 depending on the context which can lead to unexpected behavior.
 
-For example, the code below works as expected beca
+For example, the code below operates as expected where `work()` is called in a sync
+context:
 
 ```python
 from prefect.utilities.asyncutils import sync_compatible
@@ -207,7 +187,7 @@ def test_sync():
 test_sync()
 ```
 
-However, if we now call `work()` from an async context, the behavior changes.
+However, if we now call `work()` from an async context, the behavior changes:
 
 ```python
 import asyncio
