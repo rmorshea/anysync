@@ -56,10 +56,12 @@ import anysync
 
 @anysync.generator
 async def gen():
-    yield 42
+    yield 1
+    yield 2
+    yield 3
 
 
-assert list(gen()) == [42]
+assert list(gen()) == [1, 2, 3]
 ```
 
 Note that in this case you don't need to call `run()`. The generator will automatically
