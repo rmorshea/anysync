@@ -73,7 +73,7 @@ You can even use AnySync on your async context managers.
 import anysync
 
 
-@@anysync.contextmanager
+@anysync.contextmanager
 async def cm():
     yield 42
 
@@ -161,7 +161,8 @@ Prefect's
 decorator. The main downside is that the behavior of the function changes dynamically
 depending on the context which can lead to unexpected behavior.
 
-For example, the code below works as expected beca
+For example, the code below operates as expected where `work()` is called in a sync
+context:
 
 ```python
 from prefect.utilities.asyncutils import sync_compatible
@@ -186,7 +187,7 @@ def test_sync():
 test_sync()
 ```
 
-However, if we now call `work()` from an async context, the behavior changes.
+However, if we now call `work()` from an async context, the behavior changes:
 
 ```python
 import asyncio
