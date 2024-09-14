@@ -149,9 +149,8 @@ asyncio.run(test_async())
 
 AnySync is similar to [`unsync`](https://pypi.org/project/unsync/) in that it allows
 async functions to be called synchronously when needed. The main differences are that
-AnySync works with type checkers, is lighter weight, works with other async libraries
-like `trio` via `anyio`, in addition to supporting async generators and context
-managers.
+AnySync works with type checkers and other async libraries like `trio` via `anyio` as
+well as async generators and context managers.
 
 ## Automatic Detection
 
