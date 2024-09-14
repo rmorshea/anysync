@@ -132,7 +132,6 @@ ban-relative-imports = "all"
 [tool.coverage.run]
 source_pkgs = ["anysync", "tests"]
 branch = true
-parallel = true
 omit = []
 
 [tool.coverage.paths]
