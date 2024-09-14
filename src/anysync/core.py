@@ -6,9 +6,9 @@ from concurrent.futures import Future
 from contextlib import AbstractAsyncContextManager, AbstractContextManager, asynccontextmanager
 from functools import wraps
 from types import TracebackType
-from typing import Any, Callable, ParamSpec, TypeVar, overload
+from typing import Any, Callable, ParamSpec, TypeVar, cast, overload
 
-from anyio import create_memory_object_stream
+from anyio import ClosedResourceError, create_memory_object_stream
 from anyio import run as anyio_run
 from sniffio import AsyncLibraryNotFoundError, current_async_library
 
@@ -27,7 +27,7 @@ def coroutine(func: Callable[P, Coroutine[None, None, R]]) -> Callable[P, AnySyn
 
     @wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> AnySyncCoroutine[R]:
-        return _AnySyncResultWrapper(func(*args, **kwargs))
+        return _AnySyncCoroutineWrapper(func(*args, **kwargs))
 
     return wrapper
 
@@ -98,29 +98,35 @@ class AnySyncIterator(AsyncIterator[Y], Iterator[Y], ABC):
         raise NotImplementedError()  # nocov
 
     def __iter__(self) -> Iterator[Y]:
-        self._setup_portal()
-        try:
-            while True:
-                yield self._blocking_portal.call(self.__anext__)
-        except StopAsyncIteration:
-            pass
+        done = cast(Any, object())
+        send_stream, recv_stream = create_memory_object_stream[Y](max_buffer_size=1)
+
+        async def _iter() -> None:
+            try:
+                async for value in self:
+                    await send_stream.send(value)
+                await send_stream.send(done)
+            except ClosedResourceError:
+                pass
+
+        with thread_worker_portal() as portal:
+            iter_future = portal.start_task_soon(_iter)
+            try:
+                while True:
+                    result = portal.call(recv_stream.receive)
+                    if result is done:
+                        break
+                    yield result
+            finally:
+                send_stream.close()
+                iter_future.result()
 
     def __next__(self) -> Y:
-        self._setup_portal()
-        try:
-            return self._blocking_portal.call(self.__anext__)
-        except StopAsyncIteration:
-            raise StopIteration() from None
-
-    def _setup_portal(self) -> None:
-        if hasattr(self, "_blocking_portal_manager"):
-            return
-        self._blocking_portal_manager = thread_worker_portal()
-        self._blocking_portal = self._blocking_portal_manager.__enter__()
-
-    def __del__(self) -> None:
-        if hasattr(self, "_blocking_portal_manager"):
-            self._blocking_portal_manager.__exit__(None, None, None)
+        with thread_worker_portal() as portal:
+            try:
+                return portal.call(self.__anext__)
+            except StopAsyncIteration:
+                raise StopIteration() from None
 
 
 class AnySyncGenerator(AnySyncIterator[Y], AsyncGenerator[Y, S], Generator[Y, S], ABC):
@@ -141,11 +147,11 @@ class AnySyncGenerator(AnySyncIterator[Y], AsyncGenerator[Y, S], Generator[Y, S]
         raise NotImplementedError()  # nocov
 
     def send(self, value: S) -> Y:
-        self._setup_portal()
-        try:
-            return self._blocking_portal.call(self.asend, value)
-        except StopAsyncIteration:
-            raise StopIteration() from None
+        with thread_worker_portal() as portal:
+            try:
+                return portal.call(self.asend, value)
+            except StopAsyncIteration:
+                raise StopIteration() from None
 
     def throw(  # type: ignore[reportIncompatibleMethodOverride]
         self,
@@ -154,8 +160,8 @@ class AnySyncGenerator(AnySyncIterator[Y], AsyncGenerator[Y, S], Generator[Y, S]
         tb: TracebackType | None = None,
         /,
     ) -> Y:
-        self._setup_portal()
-        return self._blocking_portal.call(self.athrow, typ, val, tb)
+        with thread_worker_portal() as portal:
+            return portal.call(self.athrow, typ, val, tb)
 
 
 class AnySyncContextManager(AbstractContextManager[R], AbstractAsyncContextManager[R]):
@@ -205,7 +211,7 @@ class AnySyncContextManager(AbstractContextManager[R], AbstractAsyncContextManag
         return self._exit_future.result()
 
 
-class _AnySyncResultWrapper(AnySyncCoroutine[R]):
+class _AnySyncCoroutineWrapper(AnySyncCoroutine[R]):
 
     def __init__(self, coroutine: Coroutine[None, None, R]) -> None:
         self._coroutine = coroutine
@@ -237,10 +243,10 @@ class _AnySyncGeneratorWrapper(_AnySyncIteratorWrapper, AnySyncGenerator[Y, S]):
         self,
         typ: type[BaseException],
         val: BaseException | Any = None,
-        tb: TracebackType | None = None,
+        _: TracebackType | None = None,
         /,
     ) -> Y:
-        return await self._generator.athrow(typ, val, tb)
+        return await self._generator.athrow(val or typ)
 
 
 class _AnySyncContextManagerWrapper(AnySyncContextManager[R]):

@@ -1,4 +1,6 @@
+import gc
 from contextvars import ContextVar
+from threading import Event as ThreadEvent
 from threading import Thread, current_thread, main_thread
 
 import pytest
@@ -52,6 +54,38 @@ def test_sync_wrapped_function():
 
 async def test_sync_wrapped_function_in_async_context():
     test_sync_wrapped_function()
+
+
+def test_contextvars_not_shared_between_sync_async_code():
+    new = 42
+
+    @anysync.coroutine
+    async def set_var():
+        VAR.set(new)
+        assert VAR.get() == new
+
+    set_var().run()
+    assert VAR.get() == 0
+
+
+async def test_contextvar_changes_not_shared_between_runs():
+    """Ensure that we are not modifying the thread pool's context."""
+    VAR.set(1)
+
+    @anysync.coroutine
+    async def set_var(expected):
+        # if we are running in the main thread, we are not testing anything
+        thread = current_thread()
+        assert thread is not main_thread()
+
+        new = VAR.get() + 1
+        VAR.set(new)
+        assert VAR.get() == expected
+
+    set_var(expected=2).run()
+    set_var(expected=2).run()
+
+    assert VAR.get() == 1
 
 
 # --- Context Manager ------------------------------------------------------------------
@@ -117,7 +151,7 @@ def test_exception_during_yield_is_propagated():
         except ValueError as exc:
             assert str(exc) == msg
             raise
-        else:
+        else:  # nocov
             raise AssertionError()
 
     with pytest.raises(ValueError, match=msg):
@@ -125,7 +159,22 @@ def test_exception_during_yield_is_propagated():
             raise ValueError(msg)
 
 
-# --- Generator for --------------------------------------------------------------------
+async def test_contextvars_shared_within_async_context():
+    new = 42
+
+    @anysync.contextmanager
+    async def set_var():
+        VAR.set(new)
+        assert VAR.get() == new
+        yield
+        assert VAR.get() == new
+
+    with set_var():
+        assert VAR.get() == 0
+    assert VAR.get() == 0
+
+
+# --- Generator ------------------------------------------------------------------------
 
 
 async def test_async_for_wrapped_generator():
@@ -140,7 +189,36 @@ async def test_sync_for_wrapped_generator_in_async_context():
     test_sync_for_wrapped_generator()
 
 
-# --- Generator next -------------------------------------------------------------------
+async def test_contextvars_shared_within_async_for():
+    new = 42
+
+    @anysync.generator
+    async def set_var():
+        VAR.set(new)
+        yield VAR.get()
+        yield VAR.get()
+        yield VAR.get()
+
+    assert list(set_var()) == [new, new, new]
+    assert VAR.get() == 0
+
+
+async def test_async_for_with_early_break_eventually_stops():
+    did_stop = ThreadEvent()
+
+    @anysync.generator
+    async def gen():
+        try:
+            while True:
+                yield
+        finally:
+            did_stop.set()
+
+    next(iter(gen()))
+    # only stops after the generator is garbage collected
+    gc.collect()
+
+    did_stop.wait()
 
 
 async def test_async_next_wrapped_generator():
@@ -173,7 +251,23 @@ async def test_sync_next_wrapped_generator_in_async_context():
     test_sync_next_wrapped_generator()
 
 
-# --- Generator send -------------------------------------------------------------------
+async def test_contextvars_not_shared_between_async_next_calls():
+    new = 42
+
+    @anysync.generator
+    async def set_var():
+        VAR.set(new)
+        yield VAR.get()
+        yield VAR.get()
+        yield VAR.get()
+
+    gen = set_var()
+    assert next(gen) == new
+    assert VAR.get() == 0
+    assert next(gen) == 0
+    assert VAR.get() == 0
+    assert next(gen) == 0
+    assert VAR.get() == 0
 
 
 async def test_async_send_wrapped_generator():
@@ -230,53 +324,6 @@ async def test_sync_throw_wrapped_generator_in_async_context():
 
 
 # --- Context Vars ---------------------------------------------------------------------
-
-
-def test_contextvars_not_shared_between_sync_async_code():
-    new = 42
-
-    @anysync.coroutine
-    async def set_var():
-        VAR.set(new)
-        assert VAR.get() == new
-
-    set_var().run()
-    assert VAR.get() == 0
-
-
-async def test_contextvars_shared_within_async_context():
-    new = 42
-
-    @anysync.contextmanager
-    async def set_var():
-        VAR.set(new)
-        assert VAR.get() == new
-        yield
-        assert VAR.get() == new
-
-    with set_var():
-        assert VAR.get() == 0
-    assert VAR.get() == 0
-
-
-async def test_contextvar_changes_not_shared_between_runs():
-    """Ensure that we are not modifying the thread pool's context."""
-    VAR.set(1)
-
-    @anysync.coroutine
-    async def set_var(expected):
-        # if we are running in the main thread, we are not testing anything
-        thread = current_thread()
-        assert thread is not main_thread()
-
-        new = VAR.get() + 1
-        VAR.set(new)
-        assert VAR.get() == expected
-
-    set_var(expected=2).run()
-    set_var(expected=2).run()
-
-    assert VAR.get() == 1
 
 
 def test_re_entrant_coroutine_does_not_deadlock():
