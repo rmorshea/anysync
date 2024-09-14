@@ -31,10 +31,15 @@ Source = "https://github.com/rmorshea/anysync"
 path = "src/anysync/__init__.py"
 
 [tool.hatch.envs.default]
-dependencies = ["pytest-cov==5.0.0", "pytest==8.3.3", "pytest-asyncio==0.24.0"]
+dependencies = [
+  "coverage[toml]>=6.5",
+  "pytest>=8.2.2,<9",
+  "pytest-asyncio>=0.23.7,<1",
+]
 [tool.hatch.envs.default.scripts]
 test = "pytest {args:tests}"
-test-cov = "pytest --cov {args:tests}"
+test-cov = "coverage run -m pytest {args:tests}"
+cov-report = ["- coverage combine", "coverage report"]
 cov = ["test-cov", "cov-report"]
 
 [tool.hatch.envs.lint]
