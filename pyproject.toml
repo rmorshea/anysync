@@ -37,8 +37,8 @@ dependencies = [
   "pytest-asyncio>=0.23.7,<1",
 ]
 [tool.hatch.envs.default.scripts]
-test = "pytest {args:tests}"
-test-cov = "coverage run -m pytest {args:tests}"
+test = "pytest  -vv {args:tests}"
+test-cov = "coverage run -m pytest -vv {args:tests}"
 cov-report = ["- coverage combine", "coverage report"]
 cov = ["test-cov", "cov-report"]
 
