@@ -1,34 +1,41 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Awaitable, Iterator
 from concurrent.futures import Future
 from contextlib import contextmanager
 from threading import Thread, current_thread
-from typing import Callable, TypeVar
+from typing import Any, Callable
 from weakref import WeakSet
 
+from anyio import create_task_group
 from anyio import run as anyio_run
+from anyio.abc import TaskGroup
 from anyio.from_thread import BlockingPortal
 
-R = TypeVar("R")
-F = TypeVar("F", bound=Callable)
 
+@contextmanager
+def thread_worker_task_portal(func: Callable[[], Awaitable[Any]]) -> Iterator[BlockingPortal]:
+    """Run a long running coroutine in a separate thread for the duration of the context."""
+    task_group_future: Future[TaskGroup] = Future()
 
-def identity(x: R, /) -> R:
-    """Return the argument."""
-    return x
+    async def main() -> None:
+        async with create_task_group() as task_group:
+            task_group_future.set_result(task_group)
+            task_group.start_soon(func)
+
+    with thread_worker_portal() as portal:
+        main_future = portal.start_task_soon(main)
+        task_group = task_group_future.result()
+        try:
+            yield portal
+        finally:
+            portal.call(task_group.cancel_scope.cancel)
+            main_future.result()
 
 
 @contextmanager
 def thread_worker_portal() -> Iterator[BlockingPortal]:
-    """Context manager that yields a blocking portal for running tasks in a separate thread.
-
-    This context manager can be used to run blocking tasks in a separate thread. A global portal
-    is created on the first call to this function and reused for subsequent calls unless this
-    function is called from the same thread the global portal is running on. In that case, a new
-    temporary portal is created for the duration of the context manager. The temporary portal is
-    necessary to avoid a deadlock.
-    """
+    """Context manager that yields a blocking portal for running tasks in a separate thread."""
     global _GLOBAL_PORTAL  # noqa: PLW0603
 
     if not _GLOBAL_PORTAL:
