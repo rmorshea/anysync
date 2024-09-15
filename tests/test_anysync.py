@@ -1,5 +1,6 @@
 import gc
 from contextvars import ContextVar
+from math import factorial
 from threading import Event as ThreadEvent
 from threading import Thread, current_thread, main_thread
 
@@ -331,12 +332,22 @@ def test_re_entrant_coroutine_does_not_deadlock():
     threads_used: set[Thread] = set()
 
     @anysync.coroutine
-    async def re_entrant_func(count):
+    async def recursive_func(count):
         threads_used.add(current_thread())
         if new_count := count - 1:
-            return re_entrant_func(new_count).run()
+            # call twice to see that we spawn two threads here
+            recursive_func(new_count).run()
+            recursive_func(new_count).run()
 
-    count = 10
-    re_entrant_func(count).run()
+    call_count = 2
+    recurse_count = 3
 
-    assert len(threads_used) == count
+    for _ in range(call_count):
+        recursive_func(recurse_count).run()
+
+    assert len(threads_used) == (
+        # threads spawned by recursive calls
+        factorial(recurse_count) * call_count
+        # the main thread's worker is reused so subtract
+        - call_count
+    )
