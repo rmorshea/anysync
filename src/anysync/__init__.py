@@ -1,4 +1,26 @@
-from anysync.core import AnySyncContextManager, AnySyncCoroutine, AnySyncGenerator, contextmanager, coroutine, generator
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version
 
-__version__ = "0.3.1"
-__all__ = ["AnySyncContextManager", "AnySyncCoroutine", "AnySyncGenerator", "contextmanager", "coroutine", "generator"]
+from anysync.core import AnySyncContextManager
+from anysync.core import AnySyncCoroutine
+from anysync.core import AnySyncGenerator
+from anysync.core import contextmanager
+from anysync.core import coroutine
+from anysync.core import generator
+from anysync.core import iterator
+
+try:
+    __version__ = version(__name__)
+except PackageNotFoundError:  # nocov
+    __version__ = "0.0.0"
+
+
+__all__ = [
+    "AnySyncContextManager",
+    "AnySyncCoroutine",
+    "AnySyncGenerator",
+    "contextmanager",
+    "coroutine",
+    "generator",
+    "iterator",
+]

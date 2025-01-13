@@ -1,17 +1,18 @@
 import gc
 from contextvars import ContextVar
 from threading import Event as ThreadEvent
-from threading import Thread, current_thread, main_thread
+from threading import Thread
+from threading import current_thread
+from threading import main_thread
 
 import pytest
-from pytest import fixture
 
 import anysync
 
 VAR = ContextVar("VAR")
 
 
-@fixture(autouse=True)
+@pytest.fixture(autouse=True)
 def _init_var():
     token = VAR.set(0)
     yield
@@ -28,7 +29,7 @@ async def wrapped_ctx():
     yield "value"
 
 
-@anysync.generator
+@anysync.iterator
 async def wrapped_iter():
     yield 1
     yield 2
@@ -110,7 +111,9 @@ def test_cannot_resuse_context_manager():
     with ctx as value:
         assert value == "value"
 
-    with pytest.raises(RuntimeError, match="Cannot reuse async context manager when executed synchronously"):
+    with pytest.raises(
+        RuntimeError, match="Cannot reuse async context manager when executed synchronously"
+    ):
         with ctx:
             pass  # nocov
 
@@ -149,10 +152,10 @@ def test_exception_during_yield_is_propagated():
         try:
             yield
         except ValueError as exc:
-            assert str(exc) == msg
+            assert str(exc) == msg  # noqa: PT017
             raise
         else:  # nocov
-            raise AssertionError()
+            raise AssertionError
 
     with pytest.raises(ValueError, match=msg):
         with broken_ctx():
@@ -225,9 +228,13 @@ async def test_async_next_wrapped_generator():
     gen = wrapped_iter()
 
     values = []
-    values.append(await anext(gen))
-    values.append(await anext(gen))
-    values.append(await anext(gen))
+    values.extend(
+        (
+            await anext(gen),
+            await anext(gen),
+            await anext(gen),
+        )
+    )
     assert values == [1, 2, 3]
 
     with pytest.raises(StopAsyncIteration):
@@ -238,9 +245,13 @@ def test_sync_next_wrapped_generator():
     gen = wrapped_iter()
 
     values = []
-    values.append(next(gen))
-    values.append(next(gen))
-    values.append(next(gen))
+    values.extend(
+        (
+            next(gen),
+            next(gen),
+            next(gen),
+        )
+    )
     assert values == [1, 2, 3]
 
     with pytest.raises(StopIteration):
@@ -327,7 +338,6 @@ async def test_sync_throw_wrapped_generator_in_async_context():
 
 
 def test_re_entrant_coroutine_does_not_deadlock():
-
     threads_used: set[Thread] = set()
 
     @anysync.coroutine
