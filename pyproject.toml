@@ -171,3 +171,10 @@ sort = "Name"
 compare_branch = "origin/main"
 fail_under = 100
 include_untracked = true
+
+
+[tool.setuptools]
+# Workaround for
+# https://github.com/astral-sh/uv/issues/9513
+# https://github.com/pypa/setuptools/issues/4759
+license-files = []
