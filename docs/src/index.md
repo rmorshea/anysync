@@ -29,9 +29,9 @@ asyncio.run(main())
 
 Just `pip install anysync` and you're good to go!
 
-# Usage
+## Usage
 
-## Coroutines
+### Coroutines
 
 The primary use case for `anysync` is to allow async functions to be called in a
 synchronous manner. All you need to do is add the `anysync.coroutine` decorator to your
@@ -49,7 +49,7 @@ async def f():
 assert f().run() == 42
 ```
 
-## Generators
+### Generators
 
 You can also use `anysync` with async generators:
 
@@ -105,9 +105,9 @@ with CM() as x:
     assert x == 42
 ```
 
-# Comparisons
+## Comparisons
 
-## `asyncio.run`
+### `asyncio.run`
 
 Unlike `asyncio.run`, an `AnySync` object can be `run()` even if an event loop is
 already running.
@@ -149,14 +149,14 @@ async def test_async():
 asyncio.run(test_async())
 ```
 
-## `unsync`
+### `unsync`
 
 AnySync is similar to [`unsync`](https://pypi.org/project/unsync/) in that it allows
 async functions to be called synchronously when needed. The main differences are that
 AnySync works with type checkers and other async libraries like `trio` via `anyio` as
 well as async generators and context managers.
 
-## Automatic Detection
+### Automatic Detection
 
 The other approach to dealing with the challenges of mixing synchronous and asynchronous
 code is to automatically infer whether a function should be run synchronously based on
@@ -208,9 +208,9 @@ asyncio.run(test_async())
 Because `work()` is now being called from an async context, `request()` automatically
 returns a coroutine object which causes `work()` to fail.
 
-# Other Considerations
+## Other Considerations
 
-## How it Works
+### How it Works
 
 AnySync works by detecting the presence of a running event loop. If one already exists,
 then AnySync uses a separate thread to run the coroutine. Where possible AnySync tries
@@ -285,7 +285,7 @@ main_thread = current_thread()
 assert len(threads - {main_thread}) == 3
 ```
 
-## Interacting with `contextvars`
+### Interacting with `contextvars`
 
 AnySync wrapped coroutines or context managers will not propagate changes to
 [`contextvars`](https://docs.python.org/3/library/contextvars.html) from async to
