@@ -48,7 +48,7 @@ async def f():
 assert f().run() == 42
 ```
 
-### Generators
+### Iterators
 
 You can also use `anysync` with async generators:
 
@@ -56,7 +56,7 @@ You can also use `anysync` with async generators:
 import anysync
 
 
-@anysync.generator
+@anysync.iterator
 async def gen():
     yield 1
     yield 2
@@ -69,7 +69,29 @@ assert list(gen()) == [1, 2, 3]
 Note that in this case you don't need to call `run()`. The generator will automatically
 detect how it's being used and run the coroutine accordingly.
 
-## Context Managers
+### Generators
+
+You can also use `anysync` with async generators:
+
+```python
+import anysync
+
+
+@anysync.generator
+async def gen():
+    value = yield 1
+    yield value
+
+
+g = gen()
+assert next(g) == 1
+assert g.send(42) == 42
+```
+
+Note that in this case you don't need to call `run()`. The generator will automatically
+detect how it's being used and run the coroutine accordingly.
+
+### Context Managers
 
 You can even use AnySync on your async context managers.
 
