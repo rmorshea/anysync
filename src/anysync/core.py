@@ -201,7 +201,7 @@ class AnySyncContextManager(AbstractContextManager[R], AbstractAsyncContextManag
 
         self._dirty = True
         self._enter_future: Future[R] = Future()
-        self._exit_future: Future[None | bool] = Future()
+        self._exit_future: Future[bool | None] = Future()
         self._send_exc_info, self._recv_exc_info = create_memory_object_stream[_ExcInfo]()
         self._portal_manager = thread_worker_portal()
         self._portal = self._portal_manager.__enter__()
@@ -286,7 +286,7 @@ class _AnySyncContextManagerWrapper(AnySyncContextManager[R]):
         val: BaseException | None = None,
         tb: TracebackType | None = None,
         /,
-    ) -> None | bool:
+    ) -> bool | None:
         return await self._manager.__aexit__(typ, val, tb)
 
 
