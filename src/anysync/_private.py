@@ -1,16 +1,24 @@
 from __future__ import annotations
 
-from collections.abc import Awaitable, Iterator
 from concurrent.futures import Future
 from contextlib import contextmanager
-from threading import Thread, current_thread
-from typing import Any, Callable
+from contextlib import suppress
+from threading import Thread
+from threading import current_thread
+from typing import TYPE_CHECKING
+from typing import Any
 from weakref import WeakSet
 
 from anyio import create_task_group
 from anyio import run as anyio_run
-from anyio.abc import TaskGroup
 from anyio.from_thread import BlockingPortal
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable
+    from collections.abc import Callable
+    from collections.abc import Iterator
+
+    from anyio.abc import TaskGroup
 
 
 @contextmanager
@@ -36,7 +44,7 @@ def thread_worker_task_portal(func: Callable[[], Awaitable[Any]]) -> Iterator[Bl
 @contextmanager
 def thread_worker_portal() -> Iterator[BlockingPortal]:
     """Context manager that yields a blocking portal for running tasks in a separate thread."""
-    global _GLOBAL_PORTAL  # noqa: PLW0603
+    global _GLOBAL_PORTAL
 
     if not _GLOBAL_PORTAL:
         # if no global worker exists, create one
@@ -67,10 +75,8 @@ def _temporary_portal() -> Iterator[BlockingPortal]:
         cancel_remaining_tasks = True
         raise
     finally:
-        try:
+        with suppress(RuntimeError):
             portal.call(portal.stop, cancel_remaining_tasks)
-        except RuntimeError:  # nocov
-            pass
         thread.join()
 
 

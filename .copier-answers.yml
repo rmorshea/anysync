@@ -1,0 +1,11 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v0.0.7
+_src_path: https://github.com/rmorshea/python-copier-template
+author_email: ryan.morshead@gmail.com
+author_name: Ryan Morshead
+project_description: A lightweight library for allowing async functions to be called
+    in a synchronous manner.
+project_title: AnySync
+python_package_name: anysync
+python_version_range: '>=3.9'
+repo_url: https://github.com/rmorshea/anysync
