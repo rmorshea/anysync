@@ -131,16 +131,18 @@ class AnySyncIterator(AsyncIterator[Y], Iterator[Y], ABC):
         send_stream, recv_stream = create_memory_object_stream[Y](max_buffer_size=1)
 
         async def sender() -> None:
-            async for value in self:
-                await send_stream.send(value)
-            await send_stream.send(done)
+            with send_stream:
+                async for value in self:
+                    await send_stream.send(value)
+                await send_stream.send(done)
 
         with thread_worker_task_portal(sender) as portal:
-            while True:
-                result = portal.call(recv_stream.receive)
-                if result is done:
-                    break
-                yield result
+            with recv_stream:
+                while True:
+                    result = portal.call(recv_stream.receive)
+                    if result is done:
+                        break
+                    yield result
 
     def __next__(self) -> Y:
         with thread_worker_portal() as portal:
