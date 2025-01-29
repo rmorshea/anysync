@@ -13,6 +13,7 @@ from concurrent.futures import Future
 from contextlib import AbstractAsyncContextManager
 from contextlib import AbstractContextManager
 from contextlib import asynccontextmanager
+from contextlib import suppress
 from functools import wraps
 from types import TracebackType
 from typing import Any
@@ -20,6 +21,7 @@ from typing import ParamSpec
 from typing import TypeVar
 from typing import cast
 
+from anyio import BrokenResourceError
 from anyio import create_memory_object_stream
 from anyio import run as anyio_run
 from sniffio import AsyncLibraryNotFoundError
@@ -92,7 +94,9 @@ def wrap_async_generator(generator: AsyncGenerator[Y, S]) -> AnySyncGenerator[Y,
     return _AnySyncGeneratorWrapper(generator)
 
 
-def wrap_async_context_manager(manager: AbstractAsyncContextManager[R]) -> AnySyncContextManager[R]:
+def wrap_async_context_manager(
+    manager: AbstractAsyncContextManager[R],
+) -> AnySyncContextManager[R]:
     """Wrap an async context manager so that it can be run synchronously."""
     return _AnySyncContextManagerWrapper(manager)
 
@@ -131,7 +135,12 @@ class AnySyncIterator(AsyncIterator[Y], Iterator[Y], ABC):
         send_stream, recv_stream = create_memory_object_stream[Y](max_buffer_size=1)
 
         async def sender() -> None:
-            with send_stream:
+            with (
+                send_stream,
+                # Raise when recv_stream exits before send_stream. This might happen
+                # in the case of an early break while iterating through the generator.
+                suppress(BrokenResourceError)
+            ):
                 async for value in self:
                     await send_stream.send(value)
                 await send_stream.send(done)
