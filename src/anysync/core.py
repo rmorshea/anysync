@@ -135,8 +135,9 @@ class AnySyncIterator(AsyncIterator[Y], Iterator[Y], ABC):
         async def sender() -> None:
             with (
                 send_stream,
-                # Raise when recv_stream exits before send_stream. This might happen
-                # in the case of an early break while iterating through the generator.
+                # BrokenResourceError is rased when recv_stream exits before send_stream.
+                # This might happen in the case of an early break while iterating through
+                # the generator.
                 suppress(BrokenResourceError)
             ):
                 async for value in self:
