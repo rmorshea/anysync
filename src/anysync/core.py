@@ -138,7 +138,7 @@ class AnySyncIterator(AsyncIterator[Y], Iterator[Y], ABC):
                 # BrokenResourceError is rased when recv_stream exits before send_stream.
                 # This might happen in the case of an early break while iterating through
                 # the generator.
-                suppress(BrokenResourceError)
+                suppress(BrokenResourceError),
             ):
                 async for value in self:
                     await send_stream.send(value)
