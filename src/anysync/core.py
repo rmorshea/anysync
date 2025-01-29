@@ -94,9 +94,7 @@ def wrap_async_generator(generator: AsyncGenerator[Y, S]) -> AnySyncGenerator[Y,
     return _AnySyncGeneratorWrapper(generator)
 
 
-def wrap_async_context_manager(
-    manager: AbstractAsyncContextManager[R],
-) -> AnySyncContextManager[R]:
+def wrap_async_context_manager(manager: AbstractAsyncContextManager[R]) -> AnySyncContextManager[R]:
     """Wrap an async context manager so that it can be run synchronously."""
     return _AnySyncContextManagerWrapper(manager)
 
