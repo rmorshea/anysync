@@ -102,6 +102,8 @@ def wrap_async_context_manager(manager: AbstractAsyncContextManager[R]) -> AnySy
 class AnySyncCoroutine(Awaitable[R], ABC):
     """Abstract base class for an async function that can be used synchronously."""
 
+    coro: Coroutine[None, None, R]
+
     @abstractmethod
     def __await__(self) -> Generator[None, None, R]:
         raise NotImplementedError  # nocov
@@ -248,10 +250,10 @@ class AnySyncContextManager(AbstractContextManager[R], AbstractAsyncContextManag
 
 class _AnySyncCoroutineWrapper(AnySyncCoroutine[R]):
     def __init__(self, coroutine: Coroutine[None, None, R]) -> None:
-        self._coroutine = coroutine
+        self.coro = coroutine
 
     def __await__(self) -> Generator[None, None, R]:
-        return self._coroutine.__await__()
+        return self.coro.__await__()
 
 
 class _AnySyncIteratorWrapper(AnySyncIterator[Y]):
