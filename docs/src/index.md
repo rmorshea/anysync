@@ -239,8 +239,15 @@ to reuse a single global background thread that's created only when it's needed.
 However, in the case that a program repeatedly trys to synchronously run a coroutine
 while in an async context, AnySync will create a new thread each time.
 
-For example, you can count the number of threads that are used in two different
-scenarios. The first reuses the same global thread over and over again.
+#### Background Thread Reuse
+
+The script below counts the number of threads that AnySync spawns when calling `f` twice.
+
+- The function `f` runs in the main thread
+- The function `g`, when called by `f` runs in AnySync's global background thread
+
+Thus, even though `f` is called more than once we see that AnySync only spawns one
+thread for both.
 
 ```python
 from threading import current_thread
@@ -269,9 +276,17 @@ main_thread = current_thread()
 assert len(threads - {main_thread}) == 1
 ```
 
-In the second scenario, ends up creating two threads in addition to AnySync's global
-background thread because `g()` runs in the global background thread and `h()` runs in a
-new thread each time.
+#### Background Thread Spawning
+
+As above, the script below counts the number of threads that AnySync spawns when
+calling `f` twice. In this case though
+
+- `f` runs in the main thread
+- `g`, when called by `f`, runs in AnySync's global background thread
+- `h`, when called by `g`, runs in a new thread each time it's called
+
+Thus, we end up counting three threads, 1 for the global background thread used to
+run `g` and 2 more for each call `g` makes into `h`.
 
 ```python
 from threading import current_thread
