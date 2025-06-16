@@ -116,12 +116,19 @@ def wrap_async_context_manager(manager: AbstractAsyncContextManager[R]) -> AnySy
     )
 
 
+def _raise_not_implemented(*a: Any, **kw: Any) -> Any:
+    raise NotImplemented  # nocov
+
+
 class AnySyncCoroutine(Coroutine[Y_any, S_any, R], Generic[R, Y_any, S_any], ABC):
     """Abstract base class for an async function that can be used synchronously."""
 
     def __init__(self, coro: Coroutine[Y_any, S_any, R]) -> None:
         """Initialize the coroutine wrapper."""
         self.coro = coro
+        self.send = coro.send
+        self.throw = coro.throw
+        self.close = coro.close
 
     def __await__(self) -> Generator[Any, Any, R]:
         return self.coro.__await__()
@@ -136,27 +143,14 @@ class AnySyncCoroutine(Coroutine[Y_any, S_any, R], Generic[R, Y_any, S_any], ABC
             with thread_worker_portal() as portal:
                 return portal.start_task_soon(_identity, self).result(timeout)
 
-    def send(self, value: S_any) -> Y_any:
-        """Send a value into the coroutine."""
-        return self.coro.send(value)
-
     if TYPE_CHECKING:  # avoid typing the overloads
+        send = Coroutine[Y_any, S_any, R].send
         throw = Coroutine[Y_any, S_any, R].throw
+        close = Coroutine[Y_any, S_any, R].close
     else:
-
-        def throw(
-            self,
-            typ: type[BaseException],
-            val: BaseException | Any = None,
-            tb: TracebackType | None = None,
-            /,
-        ) -> Y_any:
-            """Raise an exception in the coroutine."""
-            return self.coro.throw(typ, val, tb)
-
-    def close(self) -> None:
-        """Close the coroutine."""
-        return self.coro.close()
+        send = _raise_not_implemented
+        throw = _raise_not_implemented
+        close = _raise_not_implemented
 
 
 class AnySyncIterator(AsyncIterator[Y], Iterator[Y], ABC):
