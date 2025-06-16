@@ -4,7 +4,6 @@ from abc import ABC
 from abc import abstractmethod
 from collections.abc import AsyncGenerator
 from collections.abc import AsyncIterator
-from collections.abc import Awaitable
 from collections.abc import Callable
 from collections.abc import Coroutine
 from collections.abc import Generator
@@ -16,9 +15,10 @@ from contextlib import asynccontextmanager
 from contextlib import suppress
 from functools import wraps
 from types import TracebackType
+from typing import TYPE_CHECKING
 from typing import Any
+from typing import Generic
 from typing import ParamSpec
-from typing import TypeVar
 from typing import cast
 
 from anyio import BrokenResourceError
@@ -26,6 +26,7 @@ from anyio import create_memory_object_stream
 from anyio import run as anyio_run
 from sniffio import AsyncLibraryNotFoundError
 from sniffio import current_async_library
+from typing_extensions import TypeVar
 
 from anysync._private import thread_worker_portal
 from anysync._private import thread_worker_task_portal
@@ -33,16 +34,24 @@ from anysync._private import thread_worker_task_portal
 P = ParamSpec("P")
 R = TypeVar("R")
 S = TypeVar("S")
+S_any = TypeVar("S_any", default=Any)
 Y = TypeVar("Y")
+Y_any = TypeVar("Y_any", default=Any)
+
 
 _ExcInfo = tuple[type[BaseException] | None, BaseException | None, TracebackType | None]
 
 
-def coroutine(func: Callable[P, Coroutine[None, None, R]]) -> Callable[P, AnySyncCoroutine[R]]:
+def run(coro: Coroutine[Any, Any, R]) -> R:
+    """Run a coroutine synchronously."""
+    return wrap_coroutine(coro).run()
+
+
+def coroutine(func: Callable[P, Coroutine[Y, S, R]]) -> Callable[P, AnySyncCoroutine[R, Y, S]]:
     """Allow an async function to optionally run synchronously by calling `run()` on the result."""
 
     @wraps(func)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> AnySyncCoroutine[R]:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> AnySyncCoroutine[R, Y, S]:
         return wrap_coroutine(func(*args, **kwargs))
 
     return wrapper
@@ -79,34 +88,50 @@ def contextmanager(func: Callable[P, AsyncIterator[R]]) -> Callable[P, AnySyncCo
     return wrapper
 
 
-def wrap_coroutine(coroutine: Coroutine[None, None, R]) -> AnySyncCoroutine[R]:
+def wrap_coroutine(coroutine: Coroutine[Y, S, R]) -> AnySyncCoroutine[R, Y, S]:
     """Wrap an coroutine so that it can be run synchronously."""
-    return _AnySyncCoroutineWrapper(coroutine)
+    return coroutine if isinstance(coroutine, AnySyncCoroutine) else AnySyncCoroutine(coroutine)
 
 
 def wrap_async_iterator(iterator: AsyncIterator[Y]) -> AnySyncIterator[Y]:
     """Wrap an async iterator so that it can be run synchronously."""
-    return _AnySyncIteratorWrapper(iterator)
+    return iterator if isinstance(iterator, AnySyncIterator) else _AnySyncIteratorWrapper(iterator)
 
 
 def wrap_async_generator(generator: AsyncGenerator[Y, S]) -> AnySyncGenerator[Y, S]:
     """Wrap an async generator so that it can be run synchronously."""
-    return _AnySyncGeneratorWrapper(generator)
+    return (
+        generator
+        if isinstance(generator, AnySyncGenerator)
+        else _AnySyncGeneratorWrapper(generator)
+    )
 
 
 def wrap_async_context_manager(manager: AbstractAsyncContextManager[R]) -> AnySyncContextManager[R]:
     """Wrap an async context manager so that it can be run synchronously."""
-    return _AnySyncContextManagerWrapper(manager)
+    return (
+        manager
+        if isinstance(manager, AnySyncContextManager)
+        else _AnySyncContextManagerWrapper(manager)
+    )
 
 
-class AnySyncCoroutine(Awaitable[R], ABC):
+def _raise_not_implemented(*a: Any, **kw: Any) -> Any:
+    raise NotImplementedError  # nocov
+
+
+class AnySyncCoroutine(Coroutine[Y_any, S_any, R], Generic[R, Y_any, S_any], ABC):
     """Abstract base class for an async function that can be used synchronously."""
 
-    coro: Coroutine[None, None, R]
+    def __init__(self, coro: Coroutine[Y_any, S_any, R]) -> None:
+        """Initialize the coroutine wrapper."""
+        self.coro = coro
+        self.send = coro.send
+        self.throw = coro.throw
+        self.close = coro.close
 
-    @abstractmethod
-    def __await__(self) -> Generator[None, None, R]:
-        raise NotImplementedError  # nocov
+    def __await__(self) -> Generator[Any, Any, R]:
+        return self.coro.__await__()
 
     def run(self, timeout: float | None = None) -> R:
         """Run the coroutine synchronously."""
@@ -117,6 +142,15 @@ class AnySyncCoroutine(Awaitable[R], ABC):
         else:
             with thread_worker_portal() as portal:
                 return portal.start_task_soon(_identity, self).result(timeout)
+
+    if TYPE_CHECKING:  # avoid typing the overloads
+        send = Coroutine[Y_any, S_any, R].send
+        throw = Coroutine[Y_any, S_any, R].throw
+        close = Coroutine[Y_any, S_any, R].close
+    else:
+        send = _raise_not_implemented
+        throw = _raise_not_implemented
+        close = _raise_not_implemented
 
 
 class AnySyncIterator(AsyncIterator[Y], Iterator[Y], ABC):
@@ -246,14 +280,6 @@ class AnySyncContextManager(AbstractContextManager[R], AbstractAsyncContextManag
     ) -> bool | None:
         self._portal.call(self._send_exc_info.send, (typ, val, tb))
         return self._exit_future.result()
-
-
-class _AnySyncCoroutineWrapper(AnySyncCoroutine[R]):
-    def __init__(self, coroutine: Coroutine[None, None, R]) -> None:
-        self.coro = coroutine
-
-    def __await__(self) -> Generator[None, None, R]:
-        return self.coro.__await__()
 
 
 class _AnySyncIteratorWrapper(AnySyncIterator[Y]):
