@@ -117,7 +117,7 @@ def wrap_async_context_manager(manager: AbstractAsyncContextManager[R]) -> AnySy
 
 
 def _raise_not_implemented(*a: Any, **kw: Any) -> Any:
-    raise NotImplemented  # nocov
+    raise NotImplementedError  # nocov
 
 
 class AnySyncCoroutine(Coroutine[Y_any, S_any, R], Generic[R, Y_any, S_any], ABC):
