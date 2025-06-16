@@ -20,6 +20,11 @@ def _init_var():
     VAR.reset(token)
 
 
+async def simple_coro():
+    """A simple coroutine that returns a value."""
+    return "value"
+
+
 @anysync.coroutine
 async def wrapped_coro():
     return "value"
@@ -44,6 +49,12 @@ async def wrapped_gen():
 
 
 # --- Coroutine ------------------------------------------------------------------------
+
+
+def test_run():
+    """Test that the run function works as expected."""
+    assert anysync.run(simple_coro()) == "value"
+    assert anysync.run(wrapped_coro()) == "value"
 
 
 async def test_await_wrapped_function():

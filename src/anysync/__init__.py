@@ -8,6 +8,7 @@ from anysync.core import contextmanager
 from anysync.core import coroutine
 from anysync.core import generator
 from anysync.core import iterator
+from anysync.core import run
 from anysync.core import wrap_async_context_manager
 from anysync.core import wrap_async_generator
 from anysync.core import wrap_async_iterator
@@ -27,6 +28,7 @@ __all__ = [
     "coroutine",
     "generator",
     "iterator",
+    "run",
     "wrap_async_context_manager",
     "wrap_async_generator",
     "wrap_async_iterator",
