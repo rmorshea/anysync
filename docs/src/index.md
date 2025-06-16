@@ -190,21 +190,18 @@ asyncio.run(test_async())
 However, with AnySync, the following code will work as expected:
 
 ```python
-import asyncio
-
-from anysync import anysync
+import anysync
 
 
-@anysync
 async def f():
     return 42
 
 
 async def test_async():
-    assert f().run() == 42
+    assert anysync.run(f()) == 42
 
 
-asyncio.run(test_async())
+anysync.run(test_async())
 ```
 
 ### `unsync`
