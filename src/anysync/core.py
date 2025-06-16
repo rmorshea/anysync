@@ -38,6 +38,11 @@ Y = TypeVar("Y")
 _ExcInfo = tuple[type[BaseException] | None, BaseException | None, TracebackType | None]
 
 
+def run(coro: Coroutine[None, None, R]) -> R:
+    """Run a coroutine with anysync."""
+    return wrap_coroutine(coro).run()
+
+
 def coroutine(func: Callable[P, Coroutine[None, None, R]]) -> Callable[P, AnySyncCoroutine[R]]:
     """Allow an async function to optionally run synchronously by calling `run()` on the result."""
 
