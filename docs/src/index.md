@@ -48,6 +48,19 @@ async def f():
 assert f().run() == 42
 ```
 
+You can also run an async function using `anysync.run`:
+
+```python
+import anysync
+
+
+async def f():
+    return 42
+
+
+assert anysync.run(f()) == 42
+```
+
 ### Iterators
 
 You can also use `anysync` with async generators:
@@ -124,6 +137,30 @@ class CM(AnySyncContextManager):
 
 with CM() as x:
     assert x == 42
+```
+
+### Wrapping Existing Objects
+
+You can convert existing coroutines, generators, iterators, or context managers into AnySync
+object using the following functions:
+
+- [`anysync.wrap_coroutine`](anysync.wrap_coroutine)
+- [`anysync.wrap_generator`](anysync.wrap_generator)
+- [`anysync.wrap_iterator`](anysync.wrap_iterator)
+- [`anysync.wrap_context_manager`](anysync.wrap_context_manager)
+
+This is useful if you have a one-off conversion and you want to avoid using the decorator syntax.
+
+```python
+import anysync
+
+
+async def f():
+    return 42
+
+
+wrapped_f = anysync.wrap_coroutine(f)
+assert wrapped_f().run() == 42
 ```
 
 ## Comparisons
