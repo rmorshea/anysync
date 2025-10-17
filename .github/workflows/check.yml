@@ -64,7 +64,7 @@ jobs:
       - name: Install UV
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
       - name: Install Python
-        run: uv python install ${{ matrix.python-version }}
+        run: uv python install ${{ env.latest-python-version }}
       - name: Check coverage
         run: uv run dev.py cov --no-test --old-coverage-xml=${{ github.workspace }}/old-coverage/coverage.xml
   py-lint:
@@ -79,7 +79,7 @@ jobs:
       - name: Install UV
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
       - name: Install Python
-        run: uv python install ${{ matrix.python-version }}
+        run: uv python install ${{ env.latest-python-version }}
       - name: Check lint
         run: uv run dev.py lint --check
   py-build:
@@ -94,7 +94,7 @@ jobs:
       - name: Install UV
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
       - name: Install Python
-        run: uv python install ${{ matrix.python-version }}
+        run: uv python install ${{ env.latest-python-version }}
       - name: Check lint
         run: uv build
   docs-build:
@@ -109,6 +109,6 @@ jobs:
       - name: Install UV
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
       - name: Install Python
-        run: uv python install ${{ matrix.python-version }}
+        run: uv python install ${{ env.latest-python-version }}
       - name: Build docs
         run: uv run dev.py docs build
