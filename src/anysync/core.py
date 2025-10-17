@@ -135,13 +135,11 @@ class AnySyncCoroutine(Coroutine[Y_any, S_any, R], Generic[R, Y_any, S_any], ABC
 
     def run(self, timeout: float | None = None) -> R:
         """Run the coroutine synchronously."""
-        try:
-            current_async_library()
-        except AsyncLibraryNotFoundError:
-            return anyio_run(_identity, self)
-        else:
+        if _in_async_context():
             with thread_worker_portal() as portal:
                 return portal.start_task_soon(_identity, self).result(timeout)
+        else:
+            return anyio_run(_identity, self)
 
     if TYPE_CHECKING:  # avoid typing the overloads
         send = Coroutine[Y_any, S_any, R].send
@@ -326,6 +324,14 @@ class _AnySyncContextManagerWrapper(AnySyncContextManager[R]):
         /,
     ) -> bool | None:
         return await self._manager.__aexit__(typ, val, tb)
+
+
+def _in_async_context() -> bool:
+    try:
+        current_async_library()
+        return True
+    except AsyncLibraryNotFoundError:
+        return False
 
 
 def _identity(x: R, /) -> R:
