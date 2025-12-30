@@ -5,7 +5,6 @@ import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
-from typing import Literal
 
 import click
 
@@ -62,6 +61,7 @@ def cov(no_test: bool, old_coverage_xml: str | None):
 @click.option("--no-md-style", is_flag=True, help="Skip style check Markdown files.")
 @click.option("--no-py-style", is_flag=True, help="Skip style check Python files.")
 @click.option("--no-py-types", is_flag=True, help="Skip type check Python files.")
+@click.option("--no-py-deps", is_flag=True, help="Skip checking dependency issues.")
 @click.option("--no-uv-locked", is_flag=True, help="Skip check that the UV lock file is synced")
 @click.option("--no-yml-style", is_flag=True, help="Skip style check YAML files.")
 def lint(
@@ -71,6 +71,7 @@ def lint(
     no_py_types: bool,
     no_uv_locked: bool,
     no_yml_style: bool,
+    no_py_deps: bool,
 ):
     """Linting commands."""
     if not no_uv_locked:
@@ -106,6 +107,8 @@ def lint(
             run(["yamlfix", "docs", ".github"])
     if not no_py_types:
         run(["pyright"])
+    if not no_py_deps:
+        run(["deptry", "src"])
 
 
 @main.group("docs")
@@ -131,10 +134,28 @@ def docs_serve():
     run(["mkdocs", "serve", "-f", "docs/mkdocs.yml"])
 
 
-@docs.command("fix")
-def fix():
-    """Fix style issues."""
-    run(["pytest", "tests/test_docs.py", "--update-examples"])
+@docs.command("check-changelog")
+@click.argument("target_branch", type=str, default="main")
+def docs_check_changelog(target_branch: str):
+    """Check if the changelog is up to date."""
+    current_branch = run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True
+    ).stdout.strip()
+    if current_branch == target_branch:
+        click.echo("Already on the target branch, skipping changelog check.")
+        return
+    run(["git", "fetch", "origin", target_branch])
+    run(
+        [
+            "git",
+            "diff",
+            "--name-only",
+            f"origin/{target_branch}..HEAD",
+            "--",
+            "CHANGELOG.md",
+        ],
+        check=False,
+    )
 
 
 if TYPE_CHECKING:
@@ -155,49 +176,6 @@ else:
             raise click.ClickException(msg) from None
 
 
-def report(
-    kind: Literal["notice", "warning", "error"],
-    /,
-    *,
-    title: str = "",
-    message: str = "",
-    file: str | None = None,
-    line: int | None = None,
-    end_line: int | None = None,
-    col: int | None = None,
-    end_col: int | None = None,
-):
-    if not IN_CI:
-        file_parts = []
-        if file:
-            file_parts.append(f"{file}")
-            if line:
-                file_parts.append(f":{line}")
-                if end_line:
-                    file_parts.append(f"-{end_line}")
-            if col:
-                file_parts.append(f":{col}")
-                if end_col:
-                    file_parts.append(f"-{end_col}")
-        file_info = "".join(file_parts)
-        click.echo(" - ".join(filter(None, [kind.upper(), file_info, title, message])))
-    else:
-        file_parts = []
-        if title or message:
-            file_parts.append(f"{title}::{message}")
-        if file:
-            file_parts.append(f"file={file}")
-            if line:
-                file_parts.append(f"line={line}")
-                if end_line:
-                    file_parts.append(f"endLine={end_line}")
-            if col:
-                file_parts.append(f"col={col}")
-                if end_col:
-                    file_parts.append(f"endCol={end_col}")
-        click.echo(f"::{kind} {','.join(file_parts)}")
-
-
 def doc_cmd(cmd: Sequence[str], *, no_pad: bool = False):
     run(
         list(
@@ -205,6 +183,7 @@ def doc_cmd(cmd: Sequence[str], *, no_pad: bool = False):
                 None,
                 [
                     "doccmd",
+                    "-v",
                     "--language=python",
                     "--no-pad-file" if no_pad else "",
                     "--command",
