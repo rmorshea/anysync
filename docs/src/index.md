@@ -3,15 +3,14 @@
 [![PyPI - Version](https://img.shields.io/pypi/v/anysync.svg)](https://pypi.org/project/anysync)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A lightweight library for allowing async functions to be called in a synchronous manner.
+A lightweight library that allows async functions to be called both synchronously and
+asynchronously.
 
 ```python
-import asyncio
-
-from anysync import anysync
+import anysync
 
 
-@anysync
+@anysync.coroutine
 async def f():
     return 42
 
@@ -19,11 +18,11 @@ async def f():
 assert f().run() == 42
 
 
-async def main():
-    assert await f() == 42
+async def g():
+    assert (await f()) == 42
 
 
-asyncio.run(main())
+anysync.run(g())
 ```
 
 Just `pip install anysync` and you're good to go!
@@ -60,6 +59,10 @@ async def f():
 
 assert anysync.run(f()) == 42
 ```
+
+!!! note
+
+    See how `anysync.run` [compares to `asyncio.run`](#asynciorun)
 
 ### Iterators
 
@@ -141,15 +144,16 @@ with CM() as x:
 
 ### Wrapping Existing Objects
 
-You can convert existing coroutines, generators, iterators, or context managers into AnySync
-object using the following functions:
+You can convert existing coroutines, generators, iterators, or context managers into
+AnySync object using the following functions:
 
 - [`anysync.wrap_coroutine`](anysync.wrap_coroutine)
 - [`anysync.wrap_generator`](anysync.wrap_generator)
 - [`anysync.wrap_iterator`](anysync.wrap_iterator)
 - [`anysync.wrap_context_manager`](anysync.wrap_context_manager)
 
-This is useful if you have a one-off conversion and you want to avoid using the decorator syntax.
+This is useful if you have a one-off conversion and you want to avoid using the
+decorator syntax.
 
 ```python
 import anysync
@@ -168,7 +172,7 @@ assert wrapped_f().run() == 42
 ### `asyncio.run`
 
 Unlike `asyncio.run`, an `AnySync` object can be `run()` even if an event loop is
-already running.
+already active.
 
 For example, the following code will raise a `RuntimeError`:
 
@@ -275,7 +279,8 @@ while in an async context, AnySync will create a new thread each time.
 
 #### Background Thread Reuse
 
-The script below counts the number of threads that AnySync spawns when calling `f` twice.
+The script below counts the number of threads that AnySync spawns when calling `f`
+twice.
 
 - The function `f` runs in the main thread
 - The function `g`, when called by `f` runs in AnySync's global background thread
@@ -312,15 +317,15 @@ assert len(threads - {main_thread}) == 1
 
 #### Background Thread Spawning
 
-As above, the script below counts the number of threads that AnySync spawns when
-calling `f` twice. In this case though
+As above, the script below counts the number of threads that AnySync spawns when calling
+`f` twice. In this case though
 
 - `f` runs in the main thread
 - `g`, when called by `f`, runs in AnySync's global background thread
 - `h`, when called by `g`, runs in a new thread each time it's called
 
-Thus, we end up counting three threads, 1 for the global background thread used to
-run `g` and 2 more for each call `g` makes into `h`.
+Thus, we end up counting three threads, 1 for the global background thread used to run
+`g` and 2 more for each call `g` makes into `h`.
 
 ```python
 from threading import current_thread
@@ -366,12 +371,12 @@ Given this, the following is **not** supported:
 ```python
 from contextvars import ContextVar
 
-from anysync import anysync
+import anysync
 
 var = ContextVar("var", default=0)
 
 
-@anysync
+@anysync.coroutine
 async def f():
     var.set(42)
 
