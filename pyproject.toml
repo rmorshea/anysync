@@ -1,11 +1,16 @@
 [build-system]
-requires = ["setuptools>=64"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.sdist]
+include = ["src/anysync", "docs"]
+[tool.hatch.build.targets.wheel]
+packages = ["src/anysync"]
 
 [project]
 name = "anysync"
-version = "1.0.1"
-description = "Dependency injection without the boilerplate."
+version = "1.0.2"
+description = "A lightweight library for allowing async functions to be called in a synchronous manner."
 readme = "README.md"
 requires-python = ">=3.10,<4"
 license = { file = "LICENSE.txt" }
@@ -15,7 +20,7 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python",
 ]
-dependencies = ["anyio>=4,<5"]
+dependencies = ["anyio>=4,<5", "sniffio>=1,<2", "typing-extensions>=4,<5"]
 [project.urls]
 Source = "https://github.com/rmorshea/anysync"
 
@@ -30,22 +35,24 @@ util = ["click==8.1.7", "ipykernel==6.29.5", "copier==9.4.1"]
 docs = [
     { include-group = "test" },
     "mkdocs-gen-files==0.5.0",
+    "mkdocs-literate-nav==0.6.1",
     "mkdocs-material==9.5.39",
     "mkdocs-open-in-new-tab==1.0.5",
     "mkdocs==1.6.1",
-    "mkdocstrings-python==1.11.1",
+    "mkdocstrings-python==1.16.12",
 ]
 lint = [
     { include-group = "test" },
     "mdformat-admon @ git+https://github.com/rmorshea/mdformat-admon.git@0e513d7a2c265faf74441938ccbd1010660609f4",
-    "mdformat-mkdocs==3.1.1",
+    "mdformat-mkdocs==4.1.0",
     "mdformat-pyproject==0.0.1",
     "mdformat-tables==1.0.0",
-    "mdformat==0.7.19",
+    "mdformat==0.7.22",
     "pyright==1.1.389",
     "ruff==0.7.3",
     "yamlfix==1.17.0",
     "doccmd==2024.11.14",
+    "deptry==0.24.0",
 ]
 test = [
     "coverage[toml]==7.6.1",
@@ -106,16 +113,12 @@ unfixable = [
     "COM819", # Trailing comma
 ]
 fixable = ["ALL"]
-
 extend-safe-fixes = ["TCH"]
-
 [tool.ruff.lint.isort]
 known-first-party = ["anysync"]
 force-single-line = true
-
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
-
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = [
     "PLC2701", # Private imports
@@ -127,12 +130,14 @@ ban-relative-imports = "all"
 "**.ipynb" = [
     "T201", # Print statements
 ]
+"docs/**" = [
+    "INP001", # Implicit namespace package
+    "D",      # Docstrings
+]
 "doccmd_*.py" = [
     "ANN",    # Type annotations
     "B018",   # Useless expression
-    "D",      # Docstrings
     "FA102",  # Unsafe __futures__ annotations usage
-    "INP001", # Implicit namespace package
     "RUF029", # No await in async function
     "S101",   # Assert statements
     "S106",   # Possible passwords
