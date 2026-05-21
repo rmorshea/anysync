@@ -163,7 +163,7 @@ async def f():
     return 42
 
 
-wrapped_f = anysync.wrap_coroutine(f)
+wrapped_f = anysync.wrap_coroutine(f())
 assert wrapped_f().run() == 42
 ```
 
